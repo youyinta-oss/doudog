@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FiveM Mod商店</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div class="loading-screen" id="loadingScreen">
+            <div class="loader"></div>
+            <p>加载中...</p>
+        </div>
+
+        <div class="shop-container" id="shopContainer" style="display: none;">
+            <div class="shop-header">
+                <div class="shop-title">
+                    <span class="shop-icon">🎮</span>
+                    <h1>FiveM Mod商店</h1>
+                </div>
+                <div class="player-info">
+                    <div class="player-name" id="playerName">Player</div>
+                    <div class="player-coins">
+                        <span class="coin-icon">🪙</span>
+                        <span id="playerCoins">0</span>
+                    </div>
+                </div>
+                <button class="close-btn" id="closeBtn">✕</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="shop">
+                    <span>🛒</span> 商城
+                </button>
+                <button class="tab" data-tab="inventory">
+                    <span>📦</span> 仓库
+                </button>
+            </div>
+
+            <div class="tab-content" id="shopTab">
+                <div class="mods-grid" id="modsGrid"></div>
+            </div>
+
+            <div class="tab-content" id="inventoryTab" style="display: none;">
+                <div class="equipped-mod" id="equippedMod">
+                    <h3>当前装备</h3>
+                    <p class="no-equipment">暂无装备</p>
+                </div>
+                <div class="mods-grid" id="inventoryGrid"></div>
+            </div>
+
+            <div class="notification" id="notification" style="display: none;">
+                <span id="notificationText"></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
