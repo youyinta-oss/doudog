@@ -8,6 +8,7 @@
 </head>
 <body>
     <div id="app">
+        <!-- 用户商店界面 -->
         <div class="shop-container" id="shopContainer">
             <div class="shop-header">
                 <div class="shop-title">
@@ -47,6 +48,82 @@
 
             <div class="notification" id="notification" style="display: none;">
                 <span id="notificationText"></span>
+            </div>
+        </div>
+
+        <!-- 管理员界面 -->
+        <div class="admin-container" id="adminContainer" style="display: none;">
+            <div class="shop-header">
+                <div class="shop-title">
+                    <span class="shop-icon">⚙️</span>
+                    <h1>Mod商店管理</h1>
+                </div>
+                <button class="close-btn" id="closeAdminBtn">✕</button>
+            </div>
+
+            <div class="admin-tabs">
+                <button class="admin-tab active" data-tab="mods">
+                    <span>🎮</span> Mod管理
+                </button>
+                <button class="admin-tab" data-tab="players">
+                    <span>👥</span> 玩家管理
+                </button>
+            </div>
+
+            <!-- Mod管理标签 -->
+            <div class="tab-content" id="adminModsTab">
+                <div class="add-mod-section">
+                    <h2>➕ 添加新Mod</h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Mod名称 *</label>
+                            <input type="text" id="modName" placeholder="输入Mod名称">
+                        </div>
+                        <div class="form-group">
+                            <label>价格 *</label>
+                            <input type="number" id="modPrice" placeholder="输入价格">
+                        </div>
+                        <div class="form-group">
+                            <label>模型名称/哈希 *</label>
+                            <input type="text" id="modModel" placeholder="例如: mp_m_freemode_01">
+                        </div>
+                        <div class="form-group">
+                            <label>分类</label>
+                            <select id="modCategory">
+                                <option value="other">其他</option>
+                                <option value="cyberpunk">赛博朋克</option>
+                                <option value="medieval">中世纪</option>
+                                <option value="military">军事</option>
+                                <option value="casual">休闲</option>
+                                <option value="hero">英雄</option>
+                            </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>图片URL</label>
+                            <input type="text" id="modImage" placeholder="输入图片链接 (可选)">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>描述</label>
+                            <textarea id="modDescription" placeholder="输入Mod描述 (可选)"></textarea>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="addModBtn">添加Mod</button>
+                </div>
+
+                <div class="mod-list-section">
+                    <h2>📋 现有Mod列表</h2>
+                    <div class="mods-grid" id="adminModsGrid"></div>
+                </div>
+            </div>
+
+            <!-- 玩家管理标签 -->
+            <div class="tab-content" id="adminPlayersTab" style="display: none;">
+                <h2>👥 在线玩家列表</h2>
+                <div class="players-grid" id="playersGrid"></div>
+            </div>
+
+            <div class="notification" id="adminNotification" style="display: none;">
+                <span id="adminNotificationText"></span>
             </div>
         </div>
     </div>

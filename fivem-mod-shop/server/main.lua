@@ -5,11 +5,13 @@ if GetResourceState('es_extended') == 'started' then
 end
 
 local playerData = {}
+local allMods = {}
 
 AddEventHandler('onResourceStart', function(resourceName)
     if resourceName == GetCurrentResourceName() then
         print('[FiveM-ModShop] 插件已启动')
         InitializeDatabase()
+        LoadAllMods()
     end
 end)
 
@@ -41,29 +43,29 @@ function InitializeDatabase()
             name VARCHAR(100),
             description TEXT,
             price INT,
+            image_url VARCHAR(500),
             model VARCHAR(100),
             category VARCHAR(50),
             enabled BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ]])
-    
-    -- 插入默认Mod
-    MySQL.query('SELECT COUNT(*) as count FROM modshop_mods', {}, function(result)
-        if result[1].count == 0 then
-            for _, mod in ipairs(Config.Mods) do
-                MySQL.insert('INSERT INTO modshop_mods (name, description, price, model, category, enabled) VALUES (?, ?, ?, ?, ?, ?)', {
-                    mod.name,
-                    mod.description,
-                    mod.price,
-                    mod.model,
-                    mod.category,
-                    true
-                })
-            end
-            print('[FiveM-ModShop] 已初始化默认Mod数据')
-        end
+end
+
+function LoadAllMods()
+    MySQL.query('SELECT * FROM modshop_mods', {}, function(result)
+        allMods = result or {}
+        print('[FiveM-ModShop] 已加载 ' .. #allMods .. ' 个Mod')
     end)
+end
+
+function IsAdmin(identifier)
+    for _, id in ipairs(Config.AdminIdentifiers) do
+        if identifier == id then
+            return true
+        end
+    end
+    return false
 end
 
 RegisterNetEvent('modshop:server:LoadPlayer')
@@ -99,7 +101,7 @@ function LoadPlayerMods(src)
     if not playerData[src] then return end
     
     MySQL.query([[
-        SELECT mo.*, m.name, m.description, m.price, m.model, m.category 
+        SELECT mo.*, m.name, m.description, m.price, m.image_url, m.model, m.category 
         FROM modshop_owned mo 
         LEFT JOIN modshop_mods m ON mo.mod_id = m.id 
         WHERE mo.player_id = ?
@@ -131,9 +133,7 @@ end
 RegisterNetEvent('modshop:server:GetMods')
 AddEventHandler('modshop:server:GetMods', function()
     local src = source
-    MySQL.query('SELECT * FROM modshop_mods WHERE enabled = TRUE', {}, function(result)
-        TriggerClientEvent('modshop:client:ModsList', src, result or {})
-    end)
+    TriggerClientEvent('modshop:client:ModsList', src, allMods)
 end)
 
 RegisterNetEvent('modshop:server:BuyMod')
@@ -141,40 +141,44 @@ AddEventHandler('modshop:server:BuyMod', function(modId)
     local src = source
     if not playerData[src] then return end
     
-    MySQL.query('SELECT * FROM modshop_mods WHERE id = ?', {modId}, function(result)
-        if not result or #result == 0 then
-            TriggerClientEvent('modshop:client:Notification', src, 'Mod不存在', 'error')
+    local mod = nil
+    for _, m in ipairs(allMods) do
+        if m.id == modId then
+            mod = m
+            break
+        end
+    end
+    
+    if not mod or not mod.enabled then
+        TriggerClientEvent('modshop:client:Notification', src, 'Mod不存在', 'error')
+        return
+    end
+    
+    if playerData[src].coins < mod.price then
+        TriggerClientEvent('modshop:client:Notification', src, '金币不足', 'error')
+        return
+    end
+    
+    MySQL.query('SELECT * FROM modshop_owned WHERE player_id = ? AND mod_id = ?', {playerData[src].id, modId}, function(ownedResult)
+        if ownedResult and #ownedResult > 0 then
+            TriggerClientEvent('modshop:client:Notification', src, '您已拥有此Mod', 'error')
             return
         end
         
-        local mod = result[1]
+        playerData[src].coins = playerData[src].coins - mod.price
         
-        if playerData[src].coins < mod.price then
-            TriggerClientEvent('modshop:client:Notification', src, '金币不足', 'error')
-            return
-        end
+        MySQL.update('UPDATE modshop_players SET coins = ? WHERE id = ?', {
+            playerData[src].coins,
+            playerData[src].id
+        })
         
-        MySQL.query('SELECT * FROM modshop_owned WHERE player_id = ? AND mod_id = ?', {playerData[src].id, modId}, function(ownedResult)
-            if ownedResult and #ownedResult > 0 then
-                TriggerClientEvent('modshop:client:Notification', src, '您已拥有此Mod', 'error')
-                return
-            end
-            
-            playerData[src].coins = playerData[src].coins - mod.price
-            
-            MySQL.update('UPDATE modshop_players SET coins = ? WHERE id = ?', {
-                playerData[src].coins,
-                playerData[src].id
-            })
-            
-            MySQL.insert('INSERT INTO modshop_owned (player_id, mod_id) VALUES (?, ?)', {
-                playerData[src].id,
-                modId
-            })
-            
-            LoadPlayerMods(src)
-            TriggerClientEvent('modshop:client:Notification', src, '成功购买: ' .. mod.name, 'success')
-        end)
+        MySQL.insert('INSERT INTO modshop_owned (player_id, mod_id) VALUES (?, ?)', {
+            playerData[src].id,
+            modId
+        })
+        
+        LoadPlayerMods(src)
+        TriggerClientEvent('modshop:client:Notification', src, '成功购买: ' .. mod.name, 'success')
     end)
 end)
 
@@ -196,20 +200,112 @@ AddEventHandler('modshop:server:EquipMod', function(modId)
     TriggerClientEvent('modshop:client:Notification', src, '装备已更新', 'success')
 end)
 
-RegisterNetEvent('modshop:server:GiveCoins')
-AddEventHandler('modshop:server:GiveCoins', function(targetId, amount)
+-- 管理员功能
+RegisterNetEvent('modshop:server:IsAdmin')
+AddEventHandler('modshop:server:IsAdmin', function()
     local src = source
-    local adminIdentifier = GetPlayerIdentifier(src, 0)
+    local identifier = GetPlayerIdentifier(src, 0)
+    local isAdmin = IsAdmin(identifier)
+    TriggerClientEvent('modshop:client:AdminStatus', src, isAdmin)
+end)
+
+RegisterNetEvent('modshop:server:AdminGetAllMods')
+AddEventHandler('modshop:server:AdminGetAllMods', function()
+    local src = source
+    local identifier = GetPlayerIdentifier(src, 0)
     
-    local isAdmin = false
-    for _, id in ipairs(Config.AdminIdentifiers) do
-        if adminIdentifier == id then
-            isAdmin = true
-            break
-        end
+    if not IsAdmin(identifier) then
+        TriggerClientEvent('modshop:client:Notification', src, '无权限', 'error')
+        return
     end
     
-    if not isAdmin then
+    TriggerClientEvent('modshop:client:AdminModsList', src, allMods)
+end)
+
+RegisterNetEvent('modshop:server:AdminAddMod')
+AddEventHandler('modshop:server:AdminAddMod', function(data)
+    local src = source
+    local identifier = GetPlayerIdentifier(src, 0)
+    
+    if not IsAdmin(identifier) then
+        TriggerClientEvent('modshop:client:Notification', src, '无权限', 'error')
+        return
+    end
+    
+    if not data.name or not data.price or not data.model then
+        TriggerClientEvent('modshop:client:Notification', src, '请填写所有必填项', 'error')
+        return
+    end
+    
+    MySQL.insert('INSERT INTO modshop_mods (name, description, price, image_url, model, category, enabled) VALUES (?, ?, ?, ?, ?, ?, ?)', {
+        data.name,
+        data.description or '',
+        tonumber(data.price),
+        data.image_url or '',
+        data.model,
+        data.category or 'other',
+        true
+    }, function(id)
+        if id then
+            LoadAllMods()
+            TriggerClientEvent('modshop:client:Notification', src, 'Mod添加成功', 'success')
+            TriggerClientEvent('modshop:client:AdminModsList', src, allMods)
+        else
+            TriggerClientEvent('modshop:client:Notification', src, 'Mod添加失败', 'error')
+        end
+    end)
+end)
+
+RegisterNetEvent('modshop:server:AdminEditMod')
+AddEventHandler('modshop:server:AdminEditMod', function(id, data)
+    local src = source
+    local identifier = GetPlayerIdentifier(src, 0)
+    
+    if not IsAdmin(identifier) then
+        TriggerClientEvent('modshop:client:Notification', src, '无权限', 'error')
+        return
+    end
+    
+    MySQL.update('UPDATE modshop_mods SET name = ?, description = ?, price = ?, image_url = ?, model = ?, category = ?, enabled = ? WHERE id = ?', {
+        data.name,
+        data.description,
+        tonumber(data.price),
+        data.image_url,
+        data.model,
+        data.category,
+        data.enabled,
+        id
+    })
+    
+    LoadAllMods()
+    TriggerClientEvent('modshop:client:Notification', src, 'Mod更新成功', 'success')
+    TriggerClientEvent('modshop:client:AdminModsList', src, allMods)
+end)
+
+RegisterNetEvent('modshop:server:AdminDeleteMod')
+AddEventHandler('modshop:server:AdminDeleteMod', function(id)
+    local src = source
+    local identifier = GetPlayerIdentifier(src, 0)
+    
+    if not IsAdmin(identifier) then
+        TriggerClientEvent('modshop:client:Notification', src, '无权限', 'error')
+        return
+    end
+    
+    MySQL.query('DELETE FROM modshop_owned WHERE mod_id = ?', {id})
+    MySQL.query('DELETE FROM modshop_mods WHERE id = ?', {id})
+    
+    LoadAllMods()
+    TriggerClientEvent('modshop:client:Notification', src, 'Mod删除成功', 'success')
+    TriggerClientEvent('modshop:client:AdminModsList', src, allMods)
+end)
+
+RegisterNetEvent('modshop:server:AdminGiveCoins')
+AddEventHandler('modshop:server:AdminGiveCoins', function(targetId, amount)
+    local src = source
+    local identifier = GetPlayerIdentifier(src, 0)
+    
+    if not IsAdmin(identifier) then
         TriggerClientEvent('modshop:client:Notification', src, '无权限', 'error')
         return
     end
@@ -229,6 +325,29 @@ AddEventHandler('modshop:server:GiveCoins', function(targetId, amount)
     SendPlayerData(targetId)
     TriggerClientEvent('modshop:client:Notification', src, '已赠送 ' .. amount .. ' 金币', 'success')
     TriggerClientEvent('modshop:client:Notification', targetId, '获得 ' .. amount .. ' 金币', 'success')
+end)
+
+RegisterNetEvent('modshop:server:AdminGetPlayers')
+AddEventHandler('modshop:server:AdminGetPlayers', function()
+    local src = source
+    local identifier = GetPlayerIdentifier(src, 0)
+    
+    if not IsAdmin(identifier) then
+        TriggerClientEvent('modshop:client:Notification', src, '无权限', 'error')
+        return
+    end
+    
+    local players = {}
+    for k, v in pairs(playerData) do
+        table.insert(players, {
+            id = k,
+            name = v.name,
+            coins = v.coins,
+            identifier = v.identifier
+        })
+    end
+    
+    TriggerClientEvent('modshop:client:AdminPlayersList', src, players)
 end)
 
 function GetPlayerIdentifier(src, index)

@@ -1,12 +1,42 @@
 local isOpen = false
+local isAdminOpen = false
 local playerCoins = 0
-local ownedMods = {}
-local equippedMod = nil
-local allMods = {}
+local ownedMods = []
+local equippedMod = null
+local allMods = []
+local isAdmin = false
+local adminPlayers = []
 
 RegisterNetEvent('modshop:client:OpenShop')
 AddEventHandler('modshop:client:OpenShop', function()
     OpenShopUI()
+end)
+
+RegisterNetEvent('modshop:client:OpenAdmin')
+AddEventHandler('modshop:client:OpenAdmin', function()
+    OpenAdminUI()
+end)
+
+RegisterNetEvent('modshop:client:AdminStatus')
+AddEventHandler('modshop:client:AdminStatus', function(admin)
+    isAdmin = admin
+end)
+
+RegisterNetEvent('modshop:client:AdminModsList')
+AddEventHandler('modshop:client:AdminModsList', function(mods)
+    SendNUIMessage({
+        type = 'updateAdminMods',
+        data = mods
+    })
+end)
+
+RegisterNetEvent('modshop:client:AdminPlayersList')
+AddEventHandler('modshop:client:AdminPlayersList', function(players)
+    adminPlayers = players
+    SendNUIMessage({
+        type = 'updateAdminPlayers',
+        data = players
+    })
 end)
 
 RegisterNetEvent('modshop:client:PlayerData')
@@ -71,10 +101,26 @@ function OpenShopUI()
     })
 end
 
-function CloseShopUI()
-    if not isOpen then return end
+function OpenAdminUI()
+    if isAdminOpen then return end
     
+    isAdminOpen = true
+    SetNuiFocus(true, true)
+    
+    TriggerServerEvent('modshop:server:AdminGetAllMods')
+    TriggerServerEvent('modshop:server:AdminGetPlayers')
+    
+    SendNUIMessage({
+        type = 'openAdmin',
+        data = {
+            categories = Config.Categories
+        }
+    })
+end
+
+function CloseShopUI()
     isOpen = false
+    isAdminOpen = false
     SetNuiFocus(false, false)
     
     SendNUIMessage({
@@ -96,7 +142,6 @@ function ApplyCharacterMod(modelName)
     if HasModelLoaded(modelName) then
         SetPlayerModel(PlayerId(), modelName)
         SetModelAsNoLongerNeeded(modelName)
-        
         SetPedDefaultComponentVariation(PlayerPedId())
     end
 end
@@ -134,13 +179,45 @@ RegisterNUICallback('unequipMod', function(data, cb)
     cb({ok = true})
 end)
 
+-- 管理员NUI回调
+RegisterNUICallback('adminAddMod', function(data, cb)
+    TriggerServerEvent('modshop:server:AdminAddMod', data)
+    cb({ok = true})
+end)
+
+RegisterNUICallback('adminEditMod', function(data, cb)
+    TriggerServerEvent('modshop:server:AdminEditMod', data.id, data)
+    cb({ok = true})
+end)
+
+RegisterNUICallback('adminDeleteMod', function(data, cb)
+    TriggerServerEvent('modshop:server:AdminDeleteMod', data.id)
+    cb({ok = true})
+end)
+
+RegisterNUICallback('adminGiveCoins', function(data, cb)
+    TriggerServerEvent('modshop:server:AdminGiveCoins', data.playerId, data.amount)
+    cb({ok = true})
+end)
+
 RegisterCommand(Config.OpenCommand, function()
     TriggerServerEvent('modshop:server:LoadPlayer')
     Wait(500)
     OpenShopUI()
 end)
 
+RegisterCommand(Config.AdminCommand, function()
+    TriggerServerEvent('modshop:server:IsAdmin')
+    Wait(500)
+    if isAdmin then
+        OpenAdminUI()
+    else
+        print('您没有管理员权限')
+    end
+end)
+
 RegisterKeyMapping(Config.OpenCommand, '打开Mod商店', 'keyboard', Config.OpenKey)
+RegisterKeyMapping(Config.AdminCommand, '打开Mod商店管理', 'keyboard', Config.AdminKey)
 
 RegisterNetEvent('onClientResourceStart')
 AddEventHandler('onClientResourceStart', function(resourceName)
