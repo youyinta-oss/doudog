@@ -1,137 +1,72 @@
-# FiveM 人物Mod插件系统
+# FiveM 人物Mod商店系统
 
-一个完整的FiveM服务器人物Mod管理系统，包含后端API、用户Web界面和管理员控制面板。
+一个完整的FiveM服务器人物Mod商店插件，使用MySQL数据库存储数据，包含玩家商店和管理员管理面板，全部在游戏内通过NUI界面操作。
 
 ## 功能特性
 
-### 管理员面板
-- 数据统计面板：玩家总数、代币总量、Mod总数、今日销售
-- 用户管理：查看所有玩家、赠送代币、赠送Mod
-- Mod管理：添加、编辑、删除、上架/下架Mod
+### 玩家端
+- **Mod商城** - 浏览和购买各种人物模型
+- **我的仓库** - 查看已拥有的Mod、装备/卸下Mod
+- **一键装备** - 点击即可应用Mod到角色
+- **美观界面** - 赛博朋克风格的游戏内UI
 
-### 用户端
-- Mod商城：浏览和购买人物Mod
-- 我的仓库：查看已拥有的Mod、装备Mod
-- 个人中心：查看余额
-
-## 技术栈
-
-### 后端
-- Node.js + Express
-- SQLite数据库
-- TypeScript
-
-### 前端
-- React 18 + TypeScript
-- Vite
-- TailwindCSS
-- React Router
-- Zustand状态管理
-
-### FiveM
-- Lua脚本
-- NUI界面
+### 管理员端
+- **Mod管理** - 游戏内添加、编辑、删除Mod（名称、价格、模型、图片URL、描述）
+- **玩家管理** - 查看在线玩家、赠送金币
+- **数据库存储** - 所有数据通过oxmysql存储在MySQL中
 
 ## 快速开始
 
-### 安装依赖
-```bash
-npm install
-```
+### 1. 前置依赖
+确保你的FiveM服务器已安装：
+- [oxmysql](https://github.com/overextended/oxmysql)
 
-### 启动开发服务器
-```bash
-npm run dev
-```
-这将同时启动前端（http://localhost:5173）和后端API（http://localhost:3001）
+### 2. 安装插件
+1. 将 `fivem-mod-shop` 文件夹复制到你的服务器 `resources` 目录
+2. 编辑 `server.cfg`，添加：
+   ```
+   ensure oxmysql
+   ensure fivem-mod-shop
+   ```
+3. 重启服务器
 
-### 访问系统
-- 用户商城：http://localhost:5173/shop
-- 管理面板：http://localhost:5173/admin
+### 3. 配置
+编辑 `fivem-mod-shop/config.lua`：
+- 设置默认金币数
+- 添加管理员标识符
 
-## FiveM服务器配置
+## 使用方法
 
-1. 将 `fivem-mod` 文件夹复制到您的FiveM服务器resources目录
-2. 修改 `fivem-mod/client.lua` 中的 `apiUrl` 变量为您的API地址
-3. 在 `server.cfg` 中添加 `ensure fivem-mod`
-4. 重启服务器
+### 玩家
+- 按 `F5` 或输入 `/modshop` 打开商店
 
-### 使用命令
-- `/modshop` - 打开Mod商店
-- 按F5键 - 打开Mod商店
+### 管理员
+- 按 `F6` 或输入 `/modshopadmin` 打开管理面板
+- 在管理面板中添加和管理Mod
 
-## 测试账号
-
-系统初始化时创建了3个测试玩家：
-- PlayerOne (license:abc123def456) - 1000代币
-- GamerPro (license:xyz789ghi012) - 2500代币
-- NeonNinja (license:mno345pqr678) - 500代币
-
-## API端点
-
-### 管理API
-- `GET /api/admin/stats` - 获取统计数据
-- `GET /api/admin/users` - 获取用户列表
-- `POST /api/admin/users/:id/give-coins` - 赠送代币
-- `POST /api/admin/users/:id/give-mod` - 赠送Mod
-- `GET /api/admin/mods/admin` - 获取所有Mod
-- `POST /api/admin/mods` - 创建Mod
-- `PUT /api/admin/mods/:id` - 更新Mod
-- `DELETE /api/admin/mods/:id` - 删除Mod
-
-### 用户API
-- `GET /api/mods` - 获取可购买的Mod
-- `GET /api/user/:identifier/mods` - 获取用户拥有的Mod
-- `GET /api/user/:identifier/coins` - 获取用户代币
-- `POST /api/user/:identifier/buy-mod` - 购买Mod
-- `POST /api/user/:identifier/equip-mod` - 装备Mod
-
-## 目录结构
+## 文件结构
 
 ```
 /workspace
-├── api/                    # 后端API
-│   ├── routes/            # API路由
-│   ├── database.ts        # 数据库初始化
-│   ├── app.ts             # Express应用
-│   └── server.ts          # 服务器入口
-├── src/                    # 前端源码
-│   ├── components/        # React组件
-│   ├── pages/             # 页面组件
-│   ├── lib/               # 工具函数
-│   └── App.tsx            # 应用入口
-├── fivem-mod/             # FiveM资源
-│   ├── fxmanifest.lua     # 资源清单
-│   ├── client.lua         # 客户端脚本
-│   ├── server.lua         # 服务器脚本
-│   └── html/              # NUI界面
-└── database.sqlite        # SQLite数据库
+└── fivem-mod-shop/         # FiveM插件
+    ├── fxmanifest.lua      # 资源清单
+    ├── config.lua          # 配置文件
+    ├── server/
+    │   └── main.lua        # 服务器端脚本
+    ├── client/
+    │   └── main.lua        # 客户端脚本
+    └── html/
+        ├── index.html      # NUI界面
+        ├── style.css       # 样式文件
+        └── app.js          # JavaScript逻辑
 ```
 
-## 设计风格
+## 数据库
 
-系统采用赛博朋克/科技感暗黑主题：
-- 主色调：深紫色 (#6C2BD9)
-- 强调色：霓虹粉 (#FF00FF)
-- 背景色：深灰黑 (#0D0D0D)
-- 字体：Orbitron (标题) + Rajdhani (正文)
-
-## 开发说明
-
-### 前端开发
-```bash
-npm run client:dev
-```
-
-### 后端开发
-```bash
-npm run server:dev
-```
-
-### 构建生产版本
-```bash
-npm run build
-```
+插件会自动创建三个表：
+- `modshop_players` - 玩家数据
+- `modshop_mods` - Mod商品
+- `modshop_owned` - 玩家拥有的Mod
 
 ## 许可证
 

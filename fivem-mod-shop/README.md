@@ -34,19 +34,6 @@
 -- 修改默认金币数
 Config.DefaultCoins = 1000
 
--- 添加或修改Mod
-Config.Mods = {
-    {
-        id = 1,
-        name = '你的Mod名称',
-        description = 'Mod描述',
-        price = 500,
-        model = 'mp_m_freemode_01', -- 模型哈希或名称
-        category = 'cyberpunk',
-        enabled = true
-    }
-}
-
 -- 添加管理员标识符
 Config.AdminIdentifiers = {
     'license:你的license这里'
@@ -61,8 +48,10 @@ Config.AdminIdentifiers = {
 - 在仓库中装备已拥有的Mod
 
 ### 管理员功能
-- 编辑 `config.lua` 添加或修改Mod
-- 在游戏中使用管理员功能（需配置identifier）
+- 按 `F6` 键或输入 `/modshopadmin` 打开管理面板
+- **Mod管理**：添加、编辑、删除Mod（包括名称、价格、模型、图片URL、描述）
+- **玩家管理**：查看在线玩家、赠送金币给玩家
+- 所有Mod数据都存储在MySQL数据库中
 
 ## 📁 文件结构
 
@@ -89,8 +78,13 @@ fivem-mod-shop/
 
 ## 🎨 自定义
 
-### 修改Mod
-在 [config.lua](file:///workspace/fivem-mod-shop/config.lua) 的 `Config.Mods` 数组中添加或修改
+### 管理Mod
+进入游戏使用管理员面板（F6）添加、编辑、删除Mod，包括：
+- Mod名称和描述
+- 价格设置
+- 模型名称/哈希
+- 图片URL
+- 分类选择
 
 ### 更换界面颜色
 编辑 [html/style.css](file:///workspace/fivem-mod-shop/html/style.css) 中的颜色变量
@@ -98,7 +92,8 @@ fivem-mod-shop/
 ### 修改按键
 在 [config.lua](file:///workspace/fivem-mod-shop/config.lua) 中修改：
 ```lua
-Config.OpenKey = 'F5' -- 改为你想要的按键
+Config.OpenKey = 'F5' -- 玩家打开商店按键
+Config.AdminKey = 'F6' -- 管理员打开面板按键
 ```
 
 ## 🔧 故障排除
